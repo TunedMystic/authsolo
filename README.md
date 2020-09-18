@@ -1,2 +1,2 @@
 # authsolo
-A simple authentication middleware for ONE user only
+authsolo is an authentication middleware for a single user.
