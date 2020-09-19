@@ -183,12 +183,14 @@ func (a *Auth) Apply(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// Routes method
-func (a *Auth) Routes() *http.ServeMux {
-	router := http.NewServeMux()
-	router.HandleFunc(a.loginURL, a.HandleLogin)
-	router.HandleFunc(a.logoutURL, a.HandleLogout)
-	return router
+type router interface {
+	HandleFunc(string, func(http.ResponseWriter, *http.Request))
+}
+
+// RegisterHandlers method
+func (a *Auth) RegisterHandlers(r router) {
+	r.HandleFunc(a.loginURL, a.HandleLogin)
+	r.HandleFunc(a.logoutURL, a.HandleLogout)
 }
 
 func getHash(text string) string {

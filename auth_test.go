@@ -377,14 +377,19 @@ func Test_Apply__auth_failed(t *testing.T) {
 	assertEqual(t, handlerReached, false)
 }
 
-func Test_Routes(t *testing.T) {
+func Test_RegisterHandlers(t *testing.T) {
 	a := Init("password")
+
+	// Register auth handlers with the router.
+	s := http.NewServeMux()
+	a.RegisterHandlers(s)
+
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodPost, "/", nil)
+	r := httptest.NewRequest(http.MethodGet, "/login", nil)
 
-	authRoutes := a.Routes()
+	http.Handler(s).ServeHTTP(w, r)
 
-	http.Handler(authRoutes).ServeHTTP(w, r)
+	assertEqual(t, w.Code, http.StatusOK)
 }
 
 // ------------------------------------------------------------------

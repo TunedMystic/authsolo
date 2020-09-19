@@ -18,8 +18,8 @@ clean:  ## Clean workspace
 install:  ## Install project dependencies
 	@go mod download
 
-.PHONY: dev
-dev:  ## Watch for file changes and run the example.
+.PHONY: watch
+watch:  ## Watch for file changes and run the example.
 	@bash -c "find . -name '*.go' | grep -v 'misc' | entr -r go run examples/main.go"
 
 .PHONY: watchtests
