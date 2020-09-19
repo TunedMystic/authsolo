@@ -123,6 +123,11 @@ func Test_LoginFormHTML(t *testing.T) {
 			<button type="submit">Login</button>
 		</form>`
 
+	// 1. Parse request data.
+	err := r.ParseForm()
+	assertEqual(t, err, nil)
+
+	// 2. Create the login form.
 	loginForm := a.LoginFormHTML(r)
 
 	assertEqual(t, compress(loginForm), compress(expectedLoginForm))
@@ -144,6 +149,11 @@ func Test_LoginFormHTML__custom_next_param(t *testing.T) {
 			<button type="submit">Login</button>
 		</form>`
 
+	// 1. Parse request data.
+	err := r.ParseForm()
+	assertEqual(t, err, nil)
+
+	// 2. Create the login form.
 	loginForm := a.LoginFormHTML(r)
 
 	assertEqual(t, compress(loginForm), compress(expectedLoginForm))
@@ -155,6 +165,11 @@ func Test_LoginFormHTML__rendering_error(t *testing.T) {
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 
+	// 1. Parse request data.
+	err := r.ParseForm()
+	assertEqual(t, err, nil)
+
+	// 2. Create the login form.
 	loginForm := a.LoginFormHTML(r)
 
 	assertEqual(t, loginForm, "")
@@ -292,6 +307,20 @@ func Test_HandleLogin_Post__invalid_password(t *testing.T) {
 	assertEqual(t, w.Code, http.StatusBadRequest)
 }
 
+func Test_HandleLogin_Post__bad_data(t *testing.T) {
+	a := Init("supersecret")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/", nil)
+
+	// Set the request Body to nil, so that
+	// the form parsing will fail.
+	r.Body = nil
+
+	http.HandlerFunc(a.HandleLogin).ServeHTTP(w, r)
+
+	assertEqual(t, w.Code, http.StatusBadRequest)
+}
+
 func Test_HandleLogout(t *testing.T) {
 	a := Init("password")
 	w := httptest.NewRecorder()
@@ -348,14 +377,19 @@ func Test_Apply__auth_failed(t *testing.T) {
 	assertEqual(t, handlerReached, false)
 }
 
-func Test_Routes(t *testing.T) {
+func Test_RegisterHandlers(t *testing.T) {
 	a := Init("password")
+
+	// Register auth handlers with the router.
+	s := http.NewServeMux()
+	a.RegisterHandlers(s)
+
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodPost, "/", nil)
+	r := httptest.NewRequest(http.MethodGet, "/login", nil)
 
-	authRoutes := a.Routes()
+	http.Handler(s).ServeHTTP(w, r)
 
-	http.Handler(authRoutes).ServeHTTP(w, r)
+	assertEqual(t, w.Code, http.StatusOK)
 }
 
 // ------------------------------------------------------------------
