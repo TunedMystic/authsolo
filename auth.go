@@ -13,6 +13,7 @@ import (
 type Auth struct {
 	hash              string
 	loginURL          string
+	logoutURL         string
 	afterLogin        string
 	nextParam         string
 	cookieName        string
@@ -24,6 +25,7 @@ func Init(password string) *Auth {
 	a := Auth{
 		hash:              getHash(password),
 		loginURL:          "/login",
+		logoutURL:         "/logout",
 		afterLogin:        "/",
 		nextParam:         "next",
 		cookieName:        "user",
@@ -73,15 +75,24 @@ func (a *Auth) IsAuthenticated(r *http.Request) bool {
 	return true
 }
 
-// LoginFormHTML method
-func (a *Auth) LoginFormHTML(r *http.Request) string {
-	afterLogin := r.URL.Query().Get("next")
+// getAfterLoginURL method
+func (a *Auth) getAfterLoginURL(r *http.Request) string {
+	url := r.Form.Get(a.nextParam)
 
-	if afterLogin == "" {
-		afterLogin = a.afterLogin
+	// If the parsed url is login/logout or is empty,
+	// then return the default afterLoginURL.
+	if url == "" || url == a.loginURL || url == a.logoutURL {
+		url = a.afterLogin
 	}
 
-	afterLogin = html.EscapeString(afterLogin)
+	url = html.EscapeString(url) // :)
+
+	return url
+}
+
+// LoginFormHTML method
+func (a *Auth) LoginFormHTML(r *http.Request) string {
+	afterLogin := a.getAfterLoginURL(r)
 
 	data := struct {
 		LoginURL   string
@@ -103,13 +114,20 @@ func (a *Auth) LoginFormHTML(r *http.Request) string {
 
 // HandleLogin method
 func (a *Auth) HandleLogin(w http.ResponseWriter, r *http.Request) {
+
+	// Parse request data, so that the subsequent methods
+	// have access to it via `r.Form`.
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid data", http.StatusBadRequest)
+		return
+	}
+
 	if r.Method == "POST" {
 		a.HandleLoginPost(w, r)
 		return
 	}
 
 	a.HandleLoginGet(w, r)
-	return
 }
 
 // HandleLoginGet method
@@ -126,26 +144,12 @@ func (a *Auth) HandleLoginGet(w http.ResponseWriter, r *http.Request) {
 
 // HandleLoginPost method
 func (a *Auth) HandleLoginPost(w http.ResponseWriter, r *http.Request) {
-
-	// Parse form data
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "invalid data", http.StatusBadRequest)
-		return
-	}
-
 	hashedPw := getHash(r.Form.Get("password"))
 
 	if hashedPw == a.hash {
 		a.Login(w, hashedPw)
 
-		// Determine where to redirect to. If afterLogin is
-		// the login url or is empty, then redirect to the
-		// fallback destination, which is '/'.
-		afterLogin := r.Form.Get("next")
-		if afterLogin == "" || afterLogin == a.loginURL {
-			afterLogin = "/"
-		}
-
+		afterLogin := a.getAfterLoginURL(r)
 		http.Redirect(w, r, afterLogin, http.StatusFound)
 		return
 	}
@@ -182,8 +186,8 @@ func (a *Auth) Apply(next http.HandlerFunc) http.HandlerFunc {
 // Routes method
 func (a *Auth) Routes() *http.ServeMux {
 	router := http.NewServeMux()
-	router.HandleFunc("/login", a.HandleLogin)
-	router.HandleFunc("/logout", a.HandleLogout)
+	router.HandleFunc(a.loginURL, a.HandleLogin)
+	router.HandleFunc(a.logoutURL, a.HandleLogout)
 	return router
 }
 

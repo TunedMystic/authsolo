@@ -123,6 +123,11 @@ func Test_LoginFormHTML(t *testing.T) {
 			<button type="submit">Login</button>
 		</form>`
 
+	// 1. Parse request data.
+	err := r.ParseForm()
+	assertEqual(t, err, nil)
+
+	// 2. Create the login form.
 	loginForm := a.LoginFormHTML(r)
 
 	assertEqual(t, compress(loginForm), compress(expectedLoginForm))
@@ -144,6 +149,11 @@ func Test_LoginFormHTML__custom_next_param(t *testing.T) {
 			<button type="submit">Login</button>
 		</form>`
 
+	// 1. Parse request data.
+	err := r.ParseForm()
+	assertEqual(t, err, nil)
+
+	// 2. Create the login form.
 	loginForm := a.LoginFormHTML(r)
 
 	assertEqual(t, compress(loginForm), compress(expectedLoginForm))
@@ -155,6 +165,11 @@ func Test_LoginFormHTML__rendering_error(t *testing.T) {
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 
+	// 1. Parse request data.
+	err := r.ParseForm()
+	assertEqual(t, err, nil)
+
+	// 2. Create the login form.
 	loginForm := a.LoginFormHTML(r)
 
 	assertEqual(t, loginForm, "")
@@ -286,6 +301,20 @@ func Test_HandleLogin_Post__invalid_password(t *testing.T) {
 	reader := strings.NewReader("password=badpassword")
 	r := httptest.NewRequest(http.MethodPost, "/", reader)
 	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	http.HandlerFunc(a.HandleLogin).ServeHTTP(w, r)
+
+	assertEqual(t, w.Code, http.StatusBadRequest)
+}
+
+func Test_HandleLogin_Post__bad_data(t *testing.T) {
+	a := Init("supersecret")
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/", nil)
+
+	// Set the request Body to nil, so that
+	// the form parsing will fail.
+	r.Body = nil
 
 	http.HandlerFunc(a.HandleLogin).ServeHTTP(w, r)
 
