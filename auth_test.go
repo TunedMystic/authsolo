@@ -37,7 +37,8 @@ func Test_Init(t *testing.T) {
 
 	assertEqual(t, a.hash, "5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8")
 	assertEqual(t, a.loginURL, "/login")
-	assertEqual(t, a.afterLogin, "/")
+	assertEqual(t, a.logoutURL, "/logout")
+	assertEqual(t, a.loginSuccessURL, "/")
 	assertEqual(t, a.nextParam, "next")
 	assertEqual(t, a.cookieName, "user")
 }
@@ -210,14 +211,14 @@ func Test_HandleLogin_Get__already_authenticated(t *testing.T) {
 	http.HandlerFunc(a.HandleLogin).ServeHTTP(w, r)
 
 	// When user is already authenticated, navigating to the
-	// login URL should redirect them to the afterLogin URL.
+	// login URL should redirect them to the loginSuccessURL.
 
 	assertEqual(t, w.Code, http.StatusFound)
 
 	// Check redirect url location
 	url, err := w.Result().Location()
 	assertEqual(t, err, nil)
-	assertEqual(t, url.Path, a.afterLogin)
+	assertEqual(t, url.Path, a.loginSuccessURL)
 }
 
 func Test_HandleLogin_Post(t *testing.T) {
@@ -235,7 +236,7 @@ func Test_HandleLogin_Post(t *testing.T) {
 	// Check redirect url location
 	url, err := w.Result().Location()
 	assertEqual(t, err, nil)
-	assertEqual(t, url.Path, a.afterLogin)
+	assertEqual(t, url.Path, a.loginSuccessURL)
 
 	// Check cookie value
 	cookie := w.Result().Cookies()[0]
@@ -272,7 +273,7 @@ func Test_HandleLogin_Post__custom_next_param(t *testing.T) {
 			http.HandlerFunc(a.HandleLogin).ServeHTTP(w, r)
 
 			// When user is successfully authenticated, they should
-			// be redirected to the afterLogin destination.
+			// be redirected to the loginSuccessURL.
 
 			assertEqual(t, w.Code, http.StatusFound)
 
