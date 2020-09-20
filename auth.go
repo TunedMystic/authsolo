@@ -2,7 +2,7 @@ package authsolo
 
 import (
 	"bytes"
-	"crypto/sha1"
+	"crypto/sha256"
 	"fmt"
 	"html"
 	"html/template"
@@ -197,7 +197,7 @@ func (a *Auth) WithRouter(h http.Handler) http.Handler {
 }
 
 func getHash(text string) string {
-	return fmt.Sprintf("%x", sha1.Sum([]byte(text)))
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(text)))
 }
 
 var loginFormHTML string = `

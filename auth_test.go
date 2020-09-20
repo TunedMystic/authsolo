@@ -20,9 +20,9 @@ func Test_GetHash(t *testing.T) {
 	}
 
 	tests := []test{
-		{"", "da39a3ee5e6b4b0d3255bfef95601890afd80709"},
-		{"hi", "c22b5f9178342609428d6f51b2c5af4c0bde6a42"},
-		{"password", "5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8"},
+		{"", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+		{"hi", "8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4"},
+		{"password", "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"},
 	}
 
 	for _, testItem := range tests {
@@ -35,7 +35,7 @@ func Test_GetHash(t *testing.T) {
 func Test_Init(t *testing.T) {
 	a := Init("password")
 
-	assertEqual(t, a.hash, "5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8")
+	assertEqual(t, a.hash, "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8")
 	assertEqual(t, a.loginURL, "/login")
 	assertEqual(t, a.logoutURL, "/logout")
 	assertEqual(t, a.loginSuccessURL, "/")
@@ -53,7 +53,7 @@ func Test_Login(t *testing.T) {
 	cookie := w.Result().Cookies()[0]
 
 	assertEqual(t, cookie.Name, "user")
-	assertEqual(t, cookie.Value, "5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8")
+	assertEqual(t, cookie.Value, "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8")
 	assertEqual(t, cookie.MaxAge, 14400)
 	assertEqual(t, cookie.HttpOnly, true)
 	assertEqual(t, cookie.SameSite, http.SameSiteStrictMode)
