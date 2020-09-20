@@ -123,15 +123,14 @@ func (a *Auth) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "POST" {
-		a.HandleLoginPost(w, r)
+		a.handleLoginPost(w, r)
 		return
 	}
 
-	a.HandleLoginGet(w, r)
+	a.handleLoginGet(w, r)
 }
 
-// HandleLoginGet method
-func (a *Auth) HandleLoginGet(w http.ResponseWriter, r *http.Request) {
+func (a *Auth) handleLoginGet(w http.ResponseWriter, r *http.Request) {
 
 	// If user is already authenticated then redirect to the destination.
 	if a.IsAuthenticated(r) {
@@ -142,8 +141,7 @@ func (a *Auth) HandleLoginGet(w http.ResponseWriter, r *http.Request) {
 	tpl.Execute(w, template.HTML(a.LoginFormHTML(r)))
 }
 
-// HandleLoginPost method
-func (a *Auth) HandleLoginPost(w http.ResponseWriter, r *http.Request) {
+func (a *Auth) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	hashedPw := getHash(r.Form.Get("password"))
 
 	if hashedPw == a.hash {
@@ -183,14 +181,20 @@ func (a *Auth) Apply(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-type router interface {
-	HandleFunc(string, func(http.ResponseWriter, *http.Request))
-}
+// WithRouter method
+func (a *Auth) WithRouter(h http.Handler) http.Handler {
 
-// RegisterHandlers method
-func (a *Auth) RegisterHandlers(r router) {
-	r.HandleFunc(a.loginURL, a.HandleLogin)
-	r.HandleFunc(a.logoutURL, a.HandleLogout)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == a.loginURL {
+			a.HandleLogin(w, r)
+			return
+		}
+		if r.URL.Path == a.logoutURL {
+			a.HandleLogout(w, r)
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
 }
 
 func getHash(text string) string {
