@@ -288,9 +288,8 @@ func Test_HandleLogin_Post__custom_next_param(t *testing.T) {
 	}
 
 	for _, testItem := range tests {
-		testName := fmt.Sprintf("[%v=%v]?", testItem.next, testItem.redirLocation)
 		subTestFunc := getSubTestFunc(testItem)
-		t.Run(testName, subTestFunc)
+		t.Run("next="+testItem.next, subTestFunc)
 	}
 }
 
@@ -377,19 +376,39 @@ func Test_Apply__auth_failed(t *testing.T) {
 	assertEqual(t, handlerReached, false)
 }
 
-func Test_RegisterHandlers(t *testing.T) {
+func Test_WithRouter(t *testing.T) {
+	s := http.NewServeMux()
+	s.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "hi")
+	})
+
 	a := Init("password")
 
-	// Register auth handlers with the router.
-	s := http.NewServeMux()
-	a.RegisterHandlers(s)
+	// Wrap the router, so the /login + /logout handlers will be injected.
+	wrappedRouter := a.WithRouter(s)
 
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodGet, "/login", nil)
+	type test struct {
+		url        string
+		statusCode int
+	}
 
-	http.Handler(s).ServeHTTP(w, r)
+	tests := []test{
+		{"/", http.StatusOK},
+		{a.loginURL, http.StatusOK},
+		{a.logoutURL, http.StatusFound},
+	}
 
-	assertEqual(t, w.Code, http.StatusOK)
+	for _, testItem := range tests {
+		t.Run("router"+testItem.url, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodGet, testItem.url, nil)
+
+			wrappedRouter.ServeHTTP(w, r)
+
+			assertEqual(t, w.Code, testItem.statusCode)
+		})
+	}
+
 }
 
 // ------------------------------------------------------------------
