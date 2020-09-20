@@ -14,7 +14,7 @@ type Auth struct {
 	hash              string
 	loginURL          string
 	logoutURL         string
-	afterLogin        string
+	loginSuccessURL   string
 	nextParam         string
 	cookieName        string
 	loginFormTemplate *template.Template
@@ -26,7 +26,7 @@ func Init(password string) *Auth {
 		hash:              getHash(password),
 		loginURL:          "/login",
 		logoutURL:         "/logout",
-		afterLogin:        "/",
+		loginSuccessURL:   "/",
 		nextParam:         "next",
 		cookieName:        "user",
 		loginFormTemplate: template.Must(template.New("").Parse(loginFormHTML)),
@@ -75,14 +75,14 @@ func (a *Auth) IsAuthenticated(r *http.Request) bool {
 	return true
 }
 
-// getAfterLoginURL method
-func (a *Auth) getAfterLoginURL(r *http.Request) string {
+// getLoginSuccessURL method
+func (a *Auth) getLoginSuccessURL(r *http.Request) string {
 	url := r.Form.Get(a.nextParam)
 
 	// If the parsed url is login/logout or is empty,
-	// then return the default afterLoginURL.
+	// then fallback to the loginSuccessURL.
 	if url == "" || url == a.loginURL || url == a.logoutURL {
-		url = a.afterLogin
+		url = a.loginSuccessURL
 	}
 
 	url = html.EscapeString(url) // :)
@@ -92,16 +92,16 @@ func (a *Auth) getAfterLoginURL(r *http.Request) string {
 
 // LoginFormHTML method
 func (a *Auth) LoginFormHTML(r *http.Request) string {
-	afterLogin := a.getAfterLoginURL(r)
+	url := a.getLoginSuccessURL(r)
 
 	data := struct {
-		LoginURL   string
-		NextParam  string
-		AfterLogin string
+		LoginURL        string
+		LoginSuccessURL string
+		NextParam       string
 	}{
 		a.loginURL,
+		url,
 		a.nextParam,
-		afterLogin,
 	}
 
 	var b bytes.Buffer
@@ -132,9 +132,9 @@ func (a *Auth) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 func (a *Auth) handleLoginGet(w http.ResponseWriter, r *http.Request) {
 
-	// If user is already authenticated then redirect to the destination.
+	// If user is already authenticated then redirect to the loginSuccessURL.
 	if a.IsAuthenticated(r) {
-		http.Redirect(w, r, a.afterLogin, http.StatusFound)
+		http.Redirect(w, r, a.loginSuccessURL, http.StatusFound)
 	}
 
 	tpl := template.Must(template.New("").Parse("<html>{{.}}</html>"))
@@ -144,11 +144,10 @@ func (a *Auth) handleLoginGet(w http.ResponseWriter, r *http.Request) {
 func (a *Auth) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	hashedPw := getHash(r.Form.Get("password"))
 
+	// Passwords match, so perform the login and redirect to the loginSuccessURL.
 	if hashedPw == a.hash {
 		a.Login(w, hashedPw)
-
-		afterLogin := a.getAfterLoginURL(r)
-		http.Redirect(w, r, afterLogin, http.StatusFound)
+		http.Redirect(w, r, a.getLoginSuccessURL(r), http.StatusFound)
 		return
 	}
 
@@ -204,6 +203,6 @@ func getHash(text string) string {
 var loginFormHTML string = `
 <form class="login-form" method="post" action="{{.LoginURL}}">
 	<input type="password" placeholder="password" name="password">
-	<input type="hidden" name="{{.NextParam}}" value="{{.AfterLogin}}">
+	<input type="hidden" name="{{.NextParam}}" value="{{.LoginSuccessURL}}">
 	<button type="submit">Login</button>
 </form>`
