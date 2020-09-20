@@ -9,7 +9,8 @@ import (
 	"net/http"
 )
 
-// Auth struct
+// Auth is a middleware that provides password authentication.
+// It also contains custom handlers (login, logout) for basic auth flow.
 type Auth struct {
 	hash              string
 	loginURL          string
@@ -20,8 +21,8 @@ type Auth struct {
 	loginFormTemplate *template.Template
 }
 
-// Init function
-func Init(password string) *Auth {
+// New creates a new Auth instance with the supplied password.
+func New(password string) *Auth {
 	a := Auth{
 		hash:              getHash(password),
 		loginURL:          "/login",
@@ -34,7 +35,7 @@ func Init(password string) *Auth {
 	return &a
 }
 
-// Login method
+// Login creates a cookie with the hashed password, and sets it on the ResponseWriter.
 func (a *Auth) Login(w http.ResponseWriter, hashedPw string) {
 	cookie := http.Cookie{
 		Name:     a.cookieName,
@@ -46,7 +47,7 @@ func (a *Auth) Login(w http.ResponseWriter, hashedPw string) {
 	http.SetCookie(w, &cookie)
 }
 
-// Logout method
+// Logout removes the cookie from the ResponseWriter.
 func (a *Auth) Logout(w http.ResponseWriter) {
 	cookie := http.Cookie{
 		Name:     a.cookieName,
@@ -58,7 +59,8 @@ func (a *Auth) Logout(w http.ResponseWriter) {
 	http.SetCookie(w, &cookie)
 }
 
-// IsAuthenticated method
+// IsAuthenticated checks if a user is logged in. It checks an http.Request
+// to see if the cookie's hash matches the one stored in the middleware.
 func (a *Auth) IsAuthenticated(r *http.Request) bool {
 	c, err := r.Cookie(a.cookieName)
 
@@ -75,7 +77,8 @@ func (a *Auth) IsAuthenticated(r *http.Request) bool {
 	return true
 }
 
-// getLoginSuccessURL method
+// Users can specify where they want to be redirected to after they successfully login.
+// This is called the loginSuccessURL, and is stored on the request as a query param `?next=`.
 func (a *Auth) getLoginSuccessURL(r *http.Request) string {
 	url := r.Form.Get(a.nextParam)
 
@@ -90,7 +93,7 @@ func (a *Auth) getLoginSuccessURL(r *http.Request) string {
 	return url
 }
 
-// LoginFormHTML method
+// LoginFormHTML creates and returns a login form with the resolved loginSuccessURL.
 func (a *Auth) LoginFormHTML(r *http.Request) string {
 	url := a.getLoginSuccessURL(r)
 
@@ -112,7 +115,9 @@ func (a *Auth) LoginFormHTML(r *http.Request) string {
 	return b.String()
 }
 
-// HandleLogin method
+// HandleLogin handles the logic for logging in a user.
+// On GET, login form is shown.
+// On POST, cookie is generated if passwords match.
 func (a *Auth) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Parse request data, so that the subsequent methods
@@ -130,6 +135,8 @@ func (a *Auth) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	a.handleLoginGet(w, r)
 }
 
+// handleLoginGet shows the login form if the user is not yet logged in.
+// If the user is logged in, then it redirects to the default loginSuccessURL.
 func (a *Auth) handleLoginGet(w http.ResponseWriter, r *http.Request) {
 
 	// If user is already authenticated then redirect to the loginSuccessURL.
@@ -141,6 +148,8 @@ func (a *Auth) handleLoginGet(w http.ResponseWriter, r *http.Request) {
 	tpl.Execute(w, template.HTML(a.LoginFormHTML(r)))
 }
 
+// handleLoginPost parses the login form and creates the cookie if the password match.
+// After successful login, it redirects to the resolved loginSuccessURL.
 func (a *Auth) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	hashedPw := getHash(r.Form.Get("password"))
 
@@ -154,15 +163,27 @@ func (a *Auth) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "invalid login", http.StatusBadRequest)
 }
 
-// HandleLogout method
+// HandleLogout handles the logic for logging out a user.
+// The cookie is cleared and it redirects to the configured loginURL.
 func (a *Auth) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	a.Logout(w)
 	http.Redirect(w, r, a.loginURL, http.StatusFound)
 }
 
-// Apply method
-func (a *Auth) Apply(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+// Solo provides the auth functionality for an http.HandlerFunc.
+func (a *Auth) Solo(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		// Run the auth checking logic, using `next` as an http.Handler.
+		a.SoloH(next).ServeHTTP(w, r)
+	})
+}
+
+// SoloH provides the auth functionality for an http.Handler.
+// If user is authenticated, then allow the `next` handler to execute.
+// If user is NOT authenticated, then redirect to the login page.
+func (a *Auth) SoloH(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		// If user is not authenticated, then redirect to login.
 		if !a.IsAuthenticated(r) {
@@ -175,14 +196,15 @@ func (a *Auth) Apply(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// User is authenticated. Move along.
-		next(w, r)
-	}
+		next.ServeHTTP(w, r)
+	})
 }
 
-// WithRouter method
-func (a *Auth) WithRouter(h http.Handler) http.Handler {
+// Handler wraps an http.Handler and injects the internal handlers for
+// logging in and logging out.
+func (a *Auth) Handler(h http.Handler) http.Handler {
 
+	// Wrap the handler with Auth's internal handlers.
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == a.loginURL {
 			a.HandleLogin(w, r)
@@ -196,10 +218,12 @@ func (a *Auth) WithRouter(h http.Handler) http.Handler {
 	})
 }
 
+// getHash hashes and returns the given text.
 func getHash(text string) string {
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(text)))
 }
 
+// loginFormHTML is the form used for logging in.
 var loginFormHTML string = `
 <form class="login-form" method="post" action="{{.LoginURL}}">
 	<input type="password" placeholder="password" name="password">
