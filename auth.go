@@ -174,7 +174,7 @@ func (a *Auth) HandleLogout(w http.ResponseWriter, r *http.Request) {
 func (a *Auth) Solo(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		// Run the auth checking, using `next` as an http.Handler.
+		// Run the auth checking logic, using `next` as an http.Handler.
 		a.SoloH(next).ServeHTTP(w, r)
 	})
 }
