@@ -16,3 +16,6 @@ cache:
     - $HOME/gopath/pkg/mod   # Go modules
 
 script: make test
+
+after_success:
+    - bash <(curl -s https://codecov.io/bash)
