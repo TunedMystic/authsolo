@@ -336,7 +336,7 @@ func Test_HandleLogout(t *testing.T) {
 	assertEqual(t, cookie.MaxAge, -1)
 }
 
-func Test_Apply(t *testing.T) {
+func Test_Solo(t *testing.T) {
 	a := New("password")
 	ww := httptest.NewRecorder()
 
@@ -354,13 +354,13 @@ func Test_Apply(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	http.HandlerFunc(a.Protect(h)).ServeHTTP(w, r)
+	http.HandlerFunc(a.Solo(h)).ServeHTTP(w, r)
 
 	assertEqual(t, w.Code, http.StatusOK)
 	assertEqual(t, handlerReached, true)
 }
 
-func Test_Apply__auth_failed(t *testing.T) {
+func Test_Solo__auth_failed(t *testing.T) {
 	a := New("password")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/", nil)
@@ -371,13 +371,13 @@ func Test_Apply__auth_failed(t *testing.T) {
 		handlerReached = true
 	}
 
-	http.HandlerFunc(a.Protect(h)).ServeHTTP(w, r)
+	http.HandlerFunc(a.Solo(h)).ServeHTTP(w, r)
 
 	assertEqual(t, w.Code, http.StatusFound)
 	assertEqual(t, handlerReached, false)
 }
 
-func Test_WithRouter(t *testing.T) {
+func Test_Handler(t *testing.T) {
 	s := http.NewServeMux()
 	s.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "hi")
