@@ -5,6 +5,6 @@
 
 <img alt="authsolo" width="150" src="authsolo.jpg">
 
-Authsolo is a user-less authentication middleware. It provides basic auth flow for your application, and is compatible with any http router.
+Authsolo is a user-less authentication middleware. It provides basic auth flow for your application, and is compatible with the standard `net/http` Handler.
 
 There are no users, sessions or JWT involved. With Authsolo you authenticate with just **one password**.

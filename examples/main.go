@@ -21,11 +21,11 @@ func handleNews(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	r := http.NewServeMux()
-	auth := authsolo.Init("mypassword") // 1. Initialize middleware.
+	auth := authsolo.New("mypassword") // 1. Create the middleware.
 
 	r.HandleFunc("/", handleIndex)
-	r.HandleFunc("/account", auth.Apply(handleAccount)) // 2. Wrap handlers.
+	r.HandleFunc("/account", auth.Solo(handleAccount)) // 2. Wrap handlers.
 	r.HandleFunc("/news", handleNews)
 
-	http.ListenAndServe("localhost:8000", auth.WithRouter(r)) // 3. Register authsolo's handlers.
+	http.ListenAndServe("localhost:8000", auth.Handler(r)) // 3. Register authsolo's internal handlers.
 }

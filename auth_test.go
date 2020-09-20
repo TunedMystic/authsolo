@@ -32,8 +32,8 @@ func Test_GetHash(t *testing.T) {
 	}
 }
 
-func Test_Init(t *testing.T) {
-	a := Init("password")
+func Test_New(t *testing.T) {
+	a := New("password")
 
 	assertEqual(t, a.hash, "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8")
 	assertEqual(t, a.loginURL, "/login")
@@ -44,7 +44,7 @@ func Test_Init(t *testing.T) {
 }
 
 func Test_Login(t *testing.T) {
-	a := Init("password")
+	a := New("password")
 	w := httptest.NewRecorder()
 
 	a.Login(w, a.hash)
@@ -60,7 +60,7 @@ func Test_Login(t *testing.T) {
 }
 
 func Test_Logout(t *testing.T) {
-	a := Init("password")
+	a := New("password")
 	w := httptest.NewRecorder()
 
 	a.Logout(w)
@@ -77,7 +77,7 @@ func Test_Logout(t *testing.T) {
 }
 
 func Test_IsAuthenticated(t *testing.T) {
-	a := Init("password")
+	a := New("password")
 	w := httptest.NewRecorder()
 
 	a.Login(w, a.hash)
@@ -90,14 +90,14 @@ func Test_IsAuthenticated(t *testing.T) {
 }
 
 func Test_IsAuthenticated__fails_when_cookie_not_set(t *testing.T) {
-	a := Init("password")
+	a := New("password")
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 
 	assertEqual(t, a.IsAuthenticated(r), false)
 }
 
 func Test_IsAuthenticated__fails_when_hash_mismatch(t *testing.T) {
-	a := Init("password")
+	a := New("password")
 	w := httptest.NewRecorder()
 
 	a.Login(w, a.hash)
@@ -114,7 +114,7 @@ func Test_IsAuthenticated__fails_when_hash_mismatch(t *testing.T) {
 }
 
 func Test_LoginFormHTML(t *testing.T) {
-	a := Init("password")
+	a := New("password")
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 
 	expectedLoginForm := `
@@ -135,7 +135,7 @@ func Test_LoginFormHTML(t *testing.T) {
 }
 
 func Test_LoginFormHTML__custom_next_param(t *testing.T) {
-	a := Init("password")
+	a := New("password")
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 
 	// Add query params to the Request.
@@ -161,7 +161,7 @@ func Test_LoginFormHTML__custom_next_param(t *testing.T) {
 }
 
 func Test_LoginFormHTML__rendering_error(t *testing.T) {
-	a := Init("password")
+	a := New("password")
 	a.loginFormTemplate = template.Must(template.New("").Parse("{{.BadTemplateValue}}"))
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -177,7 +177,7 @@ func Test_LoginFormHTML__rendering_error(t *testing.T) {
 }
 
 func Test_HandleLogin_Get(t *testing.T) {
-	a := Init("password")
+	a := New("password")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 
@@ -197,7 +197,7 @@ func Test_HandleLogin_Get(t *testing.T) {
 }
 
 func Test_HandleLogin_Get__already_authenticated(t *testing.T) {
-	a := Init("password")
+	a := New("password")
 	ww := httptest.NewRecorder()
 
 	a.Login(ww, a.hash)
@@ -222,7 +222,7 @@ func Test_HandleLogin_Get__already_authenticated(t *testing.T) {
 }
 
 func Test_HandleLogin_Post(t *testing.T) {
-	a := Init("supersecret")
+	a := New("supersecret")
 	w := httptest.NewRecorder()
 
 	reader := strings.NewReader("password=supersecret")
@@ -244,7 +244,7 @@ func Test_HandleLogin_Post(t *testing.T) {
 }
 
 func Test_HandleLogin_Post__custom_next_param(t *testing.T) {
-	a := Init("supersecret")
+	a := New("supersecret")
 
 	type test struct {
 		next          string
@@ -295,7 +295,7 @@ func Test_HandleLogin_Post__custom_next_param(t *testing.T) {
 }
 
 func Test_HandleLogin_Post__invalid_password(t *testing.T) {
-	a := Init("supersecret")
+	a := New("supersecret")
 	w := httptest.NewRecorder()
 
 	reader := strings.NewReader("password=badpassword")
@@ -308,7 +308,7 @@ func Test_HandleLogin_Post__invalid_password(t *testing.T) {
 }
 
 func Test_HandleLogin_Post__bad_data(t *testing.T) {
-	a := Init("supersecret")
+	a := New("supersecret")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/", nil)
 
@@ -322,7 +322,7 @@ func Test_HandleLogin_Post__bad_data(t *testing.T) {
 }
 
 func Test_HandleLogout(t *testing.T) {
-	a := Init("password")
+	a := New("password")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/", nil)
 
@@ -337,7 +337,7 @@ func Test_HandleLogout(t *testing.T) {
 }
 
 func Test_Apply(t *testing.T) {
-	a := Init("password")
+	a := New("password")
 	ww := httptest.NewRecorder()
 
 	a.Login(ww, a.hash)
@@ -354,14 +354,14 @@ func Test_Apply(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	http.HandlerFunc(a.Apply(h)).ServeHTTP(w, r)
+	http.HandlerFunc(a.Protect(h)).ServeHTTP(w, r)
 
 	assertEqual(t, w.Code, http.StatusOK)
 	assertEqual(t, handlerReached, true)
 }
 
 func Test_Apply__auth_failed(t *testing.T) {
-	a := Init("password")
+	a := New("password")
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/", nil)
 
@@ -371,7 +371,7 @@ func Test_Apply__auth_failed(t *testing.T) {
 		handlerReached = true
 	}
 
-	http.HandlerFunc(a.Apply(h)).ServeHTTP(w, r)
+	http.HandlerFunc(a.Protect(h)).ServeHTTP(w, r)
 
 	assertEqual(t, w.Code, http.StatusFound)
 	assertEqual(t, handlerReached, false)
@@ -383,10 +383,10 @@ func Test_WithRouter(t *testing.T) {
 		fmt.Fprintf(w, "hi")
 	})
 
-	a := Init("password")
+	a := New("password")
 
 	// Wrap the router, so the /login + /logout handlers will be injected.
-	wrappedRouter := a.WithRouter(s)
+	handler := a.Handler(s)
 
 	type test struct {
 		url        string
@@ -404,7 +404,7 @@ func Test_WithRouter(t *testing.T) {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, testItem.url, nil)
 
-			wrappedRouter.ServeHTTP(w, r)
+			handler.ServeHTTP(w, r)
 
 			assertEqual(t, w.Code, testItem.statusCode)
 		})
