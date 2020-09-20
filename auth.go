@@ -35,7 +35,7 @@ func New(password string) *Auth {
 	return &a
 }
 
-// Login creates a cookie with the hashed password, and sets it to the ResponseWriter.
+// Login creates a cookie with the hashed password, and sets it on the ResponseWriter.
 func (a *Auth) Login(w http.ResponseWriter, hashedPw string) {
 	cookie := http.Cookie{
 		Name:     a.cookieName,
@@ -164,7 +164,7 @@ func (a *Auth) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleLogout handles the logic for logging out a user.
-// The cookie is cleared, and it redirects to the configured loginURL.
+// The cookie is cleared and it redirects to the configured loginURL.
 func (a *Auth) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	a.Logout(w)
 	http.Redirect(w, r, a.loginURL, http.StatusFound)
