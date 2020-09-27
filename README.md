@@ -10,7 +10,9 @@
 
 Authsolo is a user-less authentication middleware. It provides basic auth flow for your application, and is compatible with the standard `net/http` Handler.
 
-There are no users, sessions or JWT involved. With Authsolo you authenticate with just **one password**.
+There are no users or sessions involved. With Authsolo you authenticate with just **one password**.
+
+> **note**: This middleware does not follow security best practices. It was created for use in demo / side projects. You shouldn't really use this in production.
 
 ## Install
 
